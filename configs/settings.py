@@ -106,6 +106,24 @@ class Settings(BaseSettings):
         description="SQLAlchemy URL for the Postgres filing index and checkpoints.",
     )
 
+    # --- Parsing / chunking ---------------------------------------------------
+    parse_max_document_bytes: int = Field(
+        default=50_000_000,
+        gt=0,
+        description="Reject documents larger than this when parsing (OOM guard).",
+    )
+    chunk_child_tokens: int = Field(
+        default=350, gt=0, description="Target token estimate per child chunk."
+    )
+    chunk_overlap_tokens: int = Field(
+        default=50, ge=0, description="Token overlap between adjacent child chunks."
+    )
+    chunk_min_section_chars: int = Field(
+        default=200,
+        ge=0,
+        description="Sections shorter than this are dropped as likely table-of-contents.",
+    )
+
     # --- Qdrant (vector store) ------------------------------------------------
     qdrant_url: str = Field(
         default="http://localhost:6333",

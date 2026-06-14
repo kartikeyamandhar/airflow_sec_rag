@@ -8,19 +8,25 @@ discovery cannot undo acquisition progress.
 
 from __future__ import annotations
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
+from app.domain.models import Chunk as ChunkModel
 from app.domain.models import Company as CompanyModel
 from app.domain.models import FilingRef, StoredArtifact
+from app.domain.models import NumericFact as NumericFactModel
 from app.index.models import (
     STATUS_DISCOVERED,
     STATUS_FAILED,
+    STATUS_PARSE_FAILED,
+    STATUS_PARSED,
     STATUS_STORED,
     Artifact,
+    Chunk,
     Company,
     Filing,
+    NumericFact,
 )
 
 
@@ -134,3 +140,105 @@ def artifact_exists(session: Session, ref_type: str, ref_key: str, kind: str) ->
         )
     )
     return found is not None
+
+
+# --- Phase 2: parsing checkpoints, facts, and chunks -------------------------
+
+
+def filings_to_parse(session: Session) -> list[Filing]:
+    """Filings that are stored but not yet parsed."""
+    return list(session.scalars(select(Filing).where(Filing.status == STATUS_STORED)))
+
+
+def mark_filing_parsed(session: Session, accession: str) -> None:
+    session.execute(
+        update(Filing)
+        .where(Filing.accession == accession)
+        .values(status=STATUS_PARSED, updated_at=func.now())
+    )
+
+
+def mark_filing_parse_failed(session: Session, accession: str) -> None:
+    session.execute(
+        update(Filing)
+        .where(Filing.accession == accession)
+        .values(status=STATUS_PARSE_FAILED, updated_at=func.now())
+    )
+
+
+def ciks_with_facts_artifact(session: Session) -> list[int]:
+    """CIKs that have a stored CompanyFacts artifact."""
+    rows = session.scalars(
+        select(Artifact.ref_key).where(
+            Artifact.ref_type == "company", Artifact.kind == "company_facts"
+        )
+    )
+    return sorted({int(ref_key) for ref_key in rows})
+
+
+def numeric_fact_count_for_cik(session: Session, cik: int) -> int:
+    count = session.scalar(
+        select(func.count()).select_from(NumericFact).where(NumericFact.cik == cik)
+    )
+    return count or 0
+
+
+def replace_numeric_facts(session: Session, cik: int, facts: list[NumericFactModel]) -> None:
+    """Replace all numeric facts for a CIK (idempotent re-parse)."""
+    session.execute(delete(NumericFact).where(NumericFact.cik == cik))
+    session.add_all(
+        [
+            NumericFact(
+                cik=fact.cik,
+                taxonomy=fact.taxonomy,
+                concept=fact.concept,
+                label=fact.label,
+                unit=fact.unit,
+                value=fact.value,
+                period_start=fact.period_start,
+                period_end=fact.period_end,
+                fiscal_year=fact.fiscal_year,
+                fiscal_period=fact.fiscal_period,
+                form=fact.form,
+                accession=fact.accession,
+                frame=fact.frame,
+            )
+            for fact in facts
+        ]
+    )
+
+
+def replace_chunks(session: Session, accession: str, chunks: list[ChunkModel]) -> None:
+    """Replace all chunks for a filing (idempotent re-parse)."""
+    session.execute(delete(Chunk).where(Chunk.accession == accession))
+    session.add_all(
+        [
+            Chunk(
+                accession=chunk.accession,
+                cik=chunk.cik,
+                ticker=chunk.ticker,
+                form=chunk.form,
+                section=chunk.section,
+                kind=chunk.kind,
+                chunk_index=chunk.chunk_index,
+                parent_index=chunk.parent_index,
+                text=chunk.text,
+                char_start=chunk.char_start,
+                char_end=chunk.char_end,
+                token_estimate=chunk.token_estimate,
+            )
+            for chunk in chunks
+        ]
+    )
+
+
+def numeric_fact_count(session: Session) -> int:
+    count = session.scalar(select(func.count()).select_from(NumericFact))
+    return count or 0
+
+
+def chunk_count_for_accession(session: Session, accession: str) -> int:
+    count = session.scalar(
+        select(func.count()).select_from(Chunk).where(Chunk.accession == accession)
+    )
+    return count or 0

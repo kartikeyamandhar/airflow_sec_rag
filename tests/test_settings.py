@@ -27,6 +27,10 @@ _DECLARED_ENV_KEYS = (
     "STORAGE_BACKEND",
     "LOCAL_STORAGE_DIR",
     "DATABASE_URL",
+    "PARSE_MAX_DOCUMENT_BYTES",
+    "CHUNK_CHILD_TOKENS",
+    "CHUNK_OVERLAP_TOKENS",
+    "CHUNK_MIN_SECTION_CHARS",
     "QDRANT_URL",
     "LLM_API_KEY",
 )
@@ -95,3 +99,7 @@ def test_acquisition_defaults(isolated_env: None) -> None:
     assert settings.storage_backend == "s3"
     assert str(settings.local_storage_dir) == "data/raw"
     assert settings.database_url.startswith("postgresql+psycopg://")
+    assert settings.parse_max_document_bytes == 50_000_000
+    assert settings.chunk_child_tokens == 350
+    assert settings.chunk_overlap_tokens == 50
+    assert settings.chunk_min_section_chars == 200

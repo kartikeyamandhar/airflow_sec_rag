@@ -18,6 +18,8 @@ from app.domain.identifiers import normalize_accession
 RefType = Literal["filing", "company"]
 # The kind of raw artifact stored.
 ArtifactKind = Literal["primary_document", "company_facts"]
+# A chunk is either a section-level parent or a token-window child within it.
+ChunkKind = Literal["parent", "child"]
 
 
 class Company(BaseModel):
@@ -73,3 +75,62 @@ class StoredArtifact(BaseModel):
     content_type: str
     source_url: str
     fetched_at: datetime
+
+
+class NumericFact(BaseModel):
+    """A single XBRL-tagged numeric fact (the numbers plane).
+
+    Instant facts (e.g. Assets at a date) have only ``period_end``; duration facts
+    (e.g. Revenues over a quarter) also have ``period_start``.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    cik: int = Field(ge=0)
+    taxonomy: str
+    concept: str
+    label: str | None = None
+    unit: str
+    value: float
+    period_start: date | None = None
+    period_end: date
+    fiscal_year: int | None = None
+    fiscal_period: str | None = None
+    form: str
+    accession: str
+    frame: str | None = None
+
+    @field_validator("accession")
+    @classmethod
+    def _normalize_accession(cls, value: str) -> str:
+        return normalize_accession(value)
+
+
+class Chunk(BaseModel):
+    """A retrieval unit of narrative text with citation offsets.
+
+    A ``parent`` chunk holds a whole section's normalized text. A ``child`` chunk is
+    a token-window slice of its parent; its ``char_start``/``char_end`` index into
+    the parent's text, so ``parent.text[child.char_start:child.char_end]`` is the
+    exact citable span.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    accession: str
+    cik: int = Field(ge=0)
+    ticker: str | None = None
+    form: str
+    section: str
+    kind: ChunkKind
+    chunk_index: int = Field(ge=0)
+    parent_index: int | None = None
+    text: str
+    char_start: int = Field(ge=0)
+    char_end: int = Field(ge=0)
+    token_estimate: int = Field(ge=0)
+
+    @field_validator("accession")
+    @classmethod
+    def _normalize_accession(cls, value: str) -> str:
+        return normalize_accession(value)

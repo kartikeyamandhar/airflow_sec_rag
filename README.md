@@ -8,8 +8,9 @@ Every claim is cited to a source span. The system scores its own confidence,
 refuses when nothing supports an answer, and blocks its own deploys when answer
 accuracy regresses on a golden set.
 
-> Status: Phase 1 complete (data acquisition). The pipeline discovers filings and
-> stores raw artifacts; parsing and retrieval come in later phases.
+> Status: Phase 2 complete (parsing and structuring). The pipeline discovers and
+> stores filings, then parses them into numeric facts and cited text chunks;
+> embedding and retrieval come in later phases.
 
 ## Two data planes
 
@@ -75,11 +76,16 @@ uv run python -m scripts.discover_filings --config configs/universe.dev.yaml
 # 3. Fetch and store raw artifacts: CompanyFacts JSON (numbers) per company and
 #    the primary document (narrative) per filing, into object storage.
 uv run python -m scripts.acquire_filings
+
+# 4. Parse stored artifacts: CompanyFacts JSON into numeric facts, and each filing
+#    into section-aware parent/child text chunks with citation offsets.
+uv run python -m scripts.parse_filings
 ```
 
-Both steps are safe to re-run: completed work is skipped via the index checkpoint.
-Numbers come from the XBRL CompanyFacts API and narrative from the filing HTML;
-parsing those raw artifacts is Phase 2.
+All steps are safe to re-run: completed work is skipped via the index checkpoint.
+Numbers come from the XBRL CompanyFacts API and narrative from the filing HTML.
+Parsing keeps the planes separate: numeric facts (attributed to their filing) and
+chunked text whose offsets map back to an exact, citable source span.
 
 ## Commands
 
