@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: lint • type • test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv (with cache keyed on uv.lock)
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      # --frozen fails the build if uv.lock is out of date, so CI runs the exact
+      # dependency set committed to the repo, with no silent re-resolution.
+      - name: Install dependencies (frozen)
+        run: uv sync --frozen
+
+      # These call the same Makefile targets a developer runs locally, so a green
+      # CI cannot diverge from a green local gate.
+      - name: Lint (ruff check + format check)
+        run: make lint
+
+      - name: Type check (mypy strict)
+        run: make type
+
+      - name: Test (pytest + coverage)
+        run: make test

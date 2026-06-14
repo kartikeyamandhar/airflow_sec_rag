@@ -1,0 +1,73 @@
+[project]
+name = "sec-rag"
+version = "0.1.0"
+description = "Grounded answer engine over SEC filings: span-cited answers, self-scored confidence, and refusal when unsupported."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+authors = [{ name = "Kartikeya Mandhar", email = "kartikeya.mandhar511@gmail.com" }]
+dependencies = [
+    "pydantic-settings>=2.14.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# This repository is a flat-layout application with two importable packages.
+# Tell hatchling exactly what to ship so an editable install resolves cleanly.
+[tool.hatch.build.targets.wheel]
+packages = ["app", "configs"]
+
+# Dev dependencies are managed via PEP 735 dependency groups and installed by
+# `uv sync` by default. Pins are loose here; uv.lock is the reproducibility anchor.
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "pre-commit>=4.0",
+]
+
+# --- Ruff: formatter + linter (single fast tool) -----------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# A tight, high-value rule set. We tighten as real code arrives rather than
+# enabling everything now (see Phase 0 red-team: avoid over-configuration debt).
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import ordering)
+    "B",   # flake8-bugbear (likely bugs)
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade (modern syntax)
+    "N",   # pep8-naming
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+
+# --- mypy: strict static typing ----------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+pretty = true
+# Our own code must be fully typed. Relax ONLY third-party packages that ship
+# no type information, and do so explicitly below (none needed yet).
+# `scripts/` joins this list once it contains modules (it is empty in Phase 0;
+# mypy errors on an explicitly-named directory that has no .py files).
+files = ["app", "configs", "tests"]
+
+# --- pytest + coverage --------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --cov=app --cov=configs --cov-report=term-missing"

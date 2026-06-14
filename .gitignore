@@ -1,0 +1,52 @@
+# --- Markdown is local/dev only (NEVER commit, except README) ----------------
+# All design docs, ADRs, PROGRESS, phase specs, and CLAUDE.md live on disk for
+# development use but are intentionally NOT tracked. README.md is the sole
+# committed markdown file.
+*.md
+!README.md
+
+# --- Secrets & local config (NEVER commit) ----------------------------------
+.env
+.env.*
+!.env.example
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+*.so
+
+# --- Virtual environments ----------------------------------------------------
+.venv/
+venv/
+env/
+
+# --- uv ----------------------------------------------------------------------
+# uv.lock IS committed (reproducibility anchor); the cache is not.
+.uv/
+
+# --- Tooling caches ----------------------------------------------------------
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# --- Project data (local scratch only; corpus never committed) ---------------
+data/*
+!data/.gitkeep
+
+# --- Notebooks ---------------------------------------------------------------
+.ipynb_checkpoints/
+
+# --- OS / editor -------------------------------------------------------------
+.DS_Store
+.idea/
+.vscode/
+*.swp
