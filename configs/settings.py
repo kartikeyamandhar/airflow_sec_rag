@@ -26,6 +26,8 @@ Usage::
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -56,6 +58,16 @@ class Settings(BaseSettings):
             "'Your Name your-email@example.com'. Required by SEC or requests 403."
         ),
     )
+    edgar_max_requests_per_second: float = Field(
+        default=9.0,
+        gt=0,
+        description="Client-side rate cap. SEC allows 10/s per IP; stay under it.",
+    )
+    edgar_request_timeout_seconds: float = Field(
+        default=30.0,
+        gt=0,
+        description="Per-request timeout for raw EDGAR fetches.",
+    )
 
     # --- RunPod (embedding compute) -------------------------------------------
     runpod_api_key: SecretStr = Field(
@@ -70,6 +82,29 @@ class Settings(BaseSettings):
         default=SecretStr(""), description="R2 secret access key."
     )
     r2_bucket: str = Field(default="sec-rag-raw", description="R2 bucket holding raw filings.")
+    r2_endpoint_url: str = Field(
+        default="",
+        description=(
+            "R2 S3-compatible endpoint, e.g. "
+            "'https://<account-id>.r2.cloudflarestorage.com'. No bucket, no trailing slash."
+        ),
+    )
+
+    # --- Object storage backend -----------------------------------------------
+    storage_backend: Literal["s3", "local"] = Field(
+        default="s3",
+        description="'s3' for R2/S3 (default); 'local' filesystem for tests and offline dev.",
+    )
+    local_storage_dir: Path = Field(
+        default=Path("data/raw"),
+        description="Root dir for the local storage backend (storage_backend='local').",
+    )
+
+    # --- Index / checkpoint database ------------------------------------------
+    database_url: str = Field(
+        default="postgresql+psycopg://sec_rag:sec_rag@localhost:5432/sec_rag",
+        description="SQLAlchemy URL for the Postgres filing index and checkpoints.",
+    )
 
     # --- Qdrant (vector store) ------------------------------------------------
     qdrant_url: str = Field(

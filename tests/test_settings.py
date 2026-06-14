@@ -16,11 +16,17 @@ from configs.settings import Settings, get_settings
 # value in the developer's real shell cannot leak into assertions.
 _DECLARED_ENV_KEYS = (
     "EDGAR_IDENTITY",
+    "EDGAR_MAX_REQUESTS_PER_SECOND",
+    "EDGAR_REQUEST_TIMEOUT_SECONDS",
     "RUNPOD_API_KEY",
     "R2_ACCOUNT_ID",
     "R2_ACCESS_KEY_ID",
     "R2_SECRET_ACCESS_KEY",
     "R2_BUCKET",
+    "R2_ENDPOINT_URL",
+    "STORAGE_BACKEND",
+    "LOCAL_STORAGE_DIR",
+    "DATABASE_URL",
     "QDRANT_URL",
     "LLM_API_KEY",
 )
@@ -80,3 +86,12 @@ def test_secret_fields_are_redacted(isolated_env: None) -> None:
 
 def test_get_settings_is_cached(isolated_env: None) -> None:
     assert get_settings() is get_settings()
+
+
+def test_acquisition_defaults(isolated_env: None) -> None:
+    settings = Settings()
+    assert settings.edgar_max_requests_per_second == 9.0
+    assert settings.edgar_request_timeout_seconds == 30.0
+    assert settings.storage_backend == "s3"
+    assert str(settings.local_storage_dir) == "data/raw"
+    assert settings.database_url.startswith("postgresql+psycopg://")

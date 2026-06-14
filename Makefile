@@ -5,7 +5,9 @@
 # cannot silently diverge. Everything runs through `uv` for a pinned, reproducible
 # toolchain; do not call bare python/ruff/mypy.
 
-.PHONY: help setup format lint type test check clean
+.PHONY: help setup format lint type test check clean db-up db-down
+
+COMPOSE := docker compose -f infra/docker-compose.yml
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -33,3 +35,9 @@ check: lint type test ## The full local gate: lint + type + test
 
 clean: ## Remove tool caches
 	rm -rf .mypy_cache .ruff_cache .pytest_cache .coverage htmlcov
+
+db-up: ## Start local Postgres (docker compose)
+	$(COMPOSE) up -d
+
+db-down: ## Stop local Postgres (keeps the data volume)
+	$(COMPOSE) down

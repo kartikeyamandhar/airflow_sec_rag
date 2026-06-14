@@ -8,8 +8,8 @@ Every claim is cited to a source span. The system scores its own confidence,
 refuses when nothing supports an answer, and blocks its own deploys when answer
 accuracy regresses on a golden set.
 
-> Status: Phase 0 complete (scaffolding and environment). No application behavior
-> yet.
+> Status: Phase 1 complete (data acquisition). The pipeline discovers filings and
+> stores raw artifacts; parsing and retrieval come in later phases.
 
 ## Two data planes
 
@@ -22,8 +22,9 @@ accuracy regresses on a golden set.
 
 - Python 3.12 (provisioned automatically by uv; pinned in `.python-version`).
 - [uv](https://docs.astral.sh/uv/) for environment and dependency management.
-- git. Docker, RunPod, R2, and an LLM key are needed in later phases (see
-  `.env.example`).
+- Docker, for the local Postgres index and for the test suite (testcontainers).
+- git. An EDGAR identity and Cloudflare R2 credentials are needed for live
+  acquisition; RunPod and an LLM key come in later phases (see `.env.example`).
 
 ## Quickstart
 
@@ -55,6 +56,31 @@ cp .env.example .env
 Secrets are typed as `SecretStr`, so they are redacted in logs and `repr()`.
 Do not commit `.env`. It is git-ignored; only `.env.example` (no values) is tracked.
 
+For live acquisition set `EDGAR_IDENTITY` (your name and email; EDGAR has no key)
+and the `R2_*` values, including `R2_ENDPOINT_URL`.
+
+## Data acquisition (Phase 1)
+
+Acquisition runs in two idempotent, resumable steps over a configured universe of
+companies ([configs/universe.dev.yaml](configs/universe.dev.yaml)).
+
+```bash
+# 1. Start the local Postgres index.
+make db-up
+
+# 2. Discover target filings (ticker -> CIK, enumerate 10-K/10-Q in the window)
+#    and record them in the index.
+uv run python -m scripts.discover_filings --config configs/universe.dev.yaml
+
+# 3. Fetch and store raw artifacts: CompanyFacts JSON (numbers) per company and
+#    the primary document (narrative) per filing, into object storage.
+uv run python -m scripts.acquire_filings
+```
+
+Both steps are safe to re-run: completed work is skipped via the index checkpoint.
+Numbers come from the XBRL CompanyFacts API and narrative from the filing HTML;
+parsing those raw artifacts is Phase 2.
+
 ## Commands
 
 All commands run through `uv` so everyone uses the same pinned toolchain. Use
@@ -68,6 +94,8 @@ All commands run through `uv` so everyone uses the same pinned toolchain. Use
 | `make type`   | Type-check (mypy strict).                          |
 | `make test`   | Run tests with coverage (pytest).                  |
 | `make check`  | `lint`, `type`, `test`. The full gate.             |
+| `make db-up`  | Start the local Postgres index (docker compose).   |
+| `make db-down`| Stop the local Postgres index.                     |
 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs the same `make`
 targets on a clean runner, so local green and CI green stay in sync.

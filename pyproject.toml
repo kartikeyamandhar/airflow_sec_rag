@@ -7,7 +7,15 @@ requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }
 authors = [{ name = "Kartikeya Mandhar", email = "kartikeya.mandhar511@gmail.com" }]
 dependencies = [
+    "boto3>=1.43.29",
+    "edgartools>=5.36.0",
+    "httpx>=0.28.1",
+    "psycopg[binary]>=3.3.4",
     "pydantic-settings>=2.14.1",
+    "pyyaml>=6.0.3",
+    "sqlalchemy>=2.0.50",
+    "structlog>=26.1.0",
+    "tenacity>=9.1.4",
 ]
 
 [build-system]
@@ -28,6 +36,11 @@ dev = [
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "pre-commit>=4.0",
+    "testcontainers[postgres]>=4.14.2",
+    "moto[s3]>=5.2.2",
+    "respx>=0.23.1",
+    "types-pyyaml>=6.0.12.20260518",
+    "boto3-stubs[s3]>=1.43.29",
 ]
 
 # --- Ruff: formatter + linter (single fast tool) -----------------------------
@@ -62,10 +75,18 @@ warn_unused_ignores = true
 show_error_codes = true
 pretty = true
 # Our own code must be fully typed. Relax ONLY third-party packages that ship
-# no type information, and do so explicitly below (none needed yet).
-# `scripts/` joins this list once it contains modules (it is empty in Phase 0;
-# mypy errors on an explicitly-named directory that has no .py files).
-files = ["app", "configs", "tests"]
+# no type information, and do so explicitly below.
+files = ["app", "configs", "tests", "scripts"]
+
+# Untyped third-party libraries. We trust them at their boundary and keep our own
+# code strict. edgar = edgartools.
+[[tool.mypy.overrides]]
+module = [
+    "edgar.*",
+    "testcontainers.*",
+    "moto.*",
+]
+ignore_missing_imports = true
 
 # --- pytest + coverage --------------------------------------------------------
 [tool.pytest.ini_options]

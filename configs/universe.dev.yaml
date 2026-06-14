@@ -1,0 +1,16 @@
+# Development universe for SEC RAG acquisition.
+# Small by design; scale by adding tickers and widening the window.
+# Amendment forms are included so /A filings are recorded and linked.
+tickers:
+  - AAPL
+  - MSFT
+  - NVDA
+  - AMZN
+  - GOOGL
+forms:
+  - "10-K"
+  - "10-Q"
+  - "10-K/A"
+  - "10-Q/A"
+start_date: 2023-01-01
+end_date: 2025-12-31
