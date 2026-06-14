@@ -29,6 +29,8 @@ STATUS_STORED = "stored"
 STATUS_FAILED = "failed"
 STATUS_PARSED = "parsed"
 STATUS_PARSE_FAILED = "parse_failed"
+STATUS_EMBEDDED = "embedded"
+STATUS_EMBED_FAILED = "embed_failed"
 
 
 class Base(DeclarativeBase):

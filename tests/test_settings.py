@@ -31,7 +31,14 @@ _DECLARED_ENV_KEYS = (
     "CHUNK_CHILD_TOKENS",
     "CHUNK_OVERLAP_TOKENS",
     "CHUNK_MIN_SECTION_CHARS",
+    "EMBEDDING_BACKEND",
+    "EMBEDDING_MODEL",
+    "EMBEDDING_DIMENSION",
+    "EMBEDDING_BATCH_SIZE",
+    "RUNPOD_ENDPOINT_ID",
     "QDRANT_URL",
+    "QDRANT_API_KEY",
+    "QDRANT_COLLECTION",
     "LLM_API_KEY",
 )
 
@@ -103,3 +110,12 @@ def test_acquisition_defaults(isolated_env: None) -> None:
     assert settings.chunk_child_tokens == 350
     assert settings.chunk_overlap_tokens == 50
     assert settings.chunk_min_section_chars == 200
+
+
+def test_embedding_defaults(isolated_env: None) -> None:
+    settings = Settings()
+    assert settings.embedding_backend == "fastembed"
+    assert settings.embedding_model == "BAAI/bge-small-en-v1.5"
+    assert settings.embedding_dimension == 384
+    assert settings.embedding_batch_size == 64
+    assert settings.qdrant_collection == "sec_filings"

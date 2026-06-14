@@ -9,10 +9,12 @@ authors = [{ name = "Kartikeya Mandhar", email = "kartikeya.mandhar511@gmail.com
 dependencies = [
     "boto3>=1.43.29",
     "edgartools>=5.36.0",
+    "fastembed>=0.8.0",
     "httpx>=0.28.1",
     "psycopg[binary]>=3.3.4",
     "pydantic-settings>=2.14.1",
     "pyyaml>=6.0.3",
+    "qdrant-client>=1.18.0",
     "selectolax>=0.4.10",
     "sqlalchemy>=2.0.50",
     "structlog>=26.1.0",
@@ -87,6 +89,7 @@ module = [
     "testcontainers.*",
     "moto.*",
     "selectolax.*",
+    "fastembed.*",
 ]
 ignore_missing_imports = true
 

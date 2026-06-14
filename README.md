@@ -8,9 +8,9 @@ Every claim is cited to a source span. The system scores its own confidence,
 refuses when nothing supports an answer, and blocks its own deploys when answer
 accuracy regresses on a golden set.
 
-> Status: Phase 2 complete (parsing and structuring). The pipeline discovers and
-> stores filings, then parses them into numeric facts and cited text chunks;
-> embedding and retrieval come in later phases.
+> Status: Phase 3 complete (embedding and vector index). The pipeline discovers,
+> stores, and parses filings, then embeds the text chunks into a Qdrant vector
+> index; retrieval and answering come in later phases.
 
 ## Two data planes
 
@@ -66,7 +66,7 @@ Acquisition runs in two idempotent, resumable steps over a configured universe o
 companies ([configs/universe.dev.yaml](configs/universe.dev.yaml)).
 
 ```bash
-# 1. Start the local Postgres index.
+# 1. Start the local Postgres index (and Qdrant for the embedding step).
 make db-up
 
 # 2. Discover target filings (ticker -> CIK, enumerate 10-K/10-Q in the window)
@@ -80,6 +80,11 @@ uv run python -m scripts.acquire_filings
 # 4. Parse stored artifacts: CompanyFacts JSON into numeric facts, and each filing
 #    into section-aware parent/child text chunks with citation offsets.
 uv run python -m scripts.parse_filings
+
+# 5. Embed the child chunks and load them into the Qdrant vector index.
+#    Default backend is local CPU (fastembed); set EMBEDDING_BACKEND=runpod to use a
+#    deployed RunPod GPU endpoint (see infra/runpod/).
+uv run python -m scripts.index_chunks
 ```
 
 All steps are safe to re-run: completed work is skipped via the index checkpoint.

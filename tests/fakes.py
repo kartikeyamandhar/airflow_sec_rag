@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
 from datetime import date
 
@@ -42,3 +43,21 @@ class FakeEdgarClient:
 
     def fetch_company_facts(self, cik: int) -> bytes | None:
         return self._facts.get(cik)
+
+
+class FakeEmbedder:
+    """A deterministic ``Embedder`` for tests (no model, no network)."""
+
+    def __init__(self, dimension: int = 8) -> None:
+        self._dimension = dimension
+
+    @property
+    def dimension(self) -> int:
+        return self._dimension
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [self._vector(text) for text in texts]
+
+    def _vector(self, text: str) -> list[float]:
+        digest = hashlib.sha256(text.encode("utf-8")).digest()
+        return [digest[i % len(digest)] / 255.0 for i in range(self._dimension)]

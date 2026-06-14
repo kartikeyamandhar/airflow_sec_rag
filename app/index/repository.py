@@ -18,6 +18,8 @@ from app.domain.models import FilingRef, StoredArtifact
 from app.domain.models import NumericFact as NumericFactModel
 from app.index.models import (
     STATUS_DISCOVERED,
+    STATUS_EMBED_FAILED,
+    STATUS_EMBEDDED,
     STATUS_FAILED,
     STATUS_PARSE_FAILED,
     STATUS_PARSED,
@@ -242,3 +244,38 @@ def chunk_count_for_accession(session: Session, accession: str) -> int:
         select(func.count()).select_from(Chunk).where(Chunk.accession == accession)
     )
     return count or 0
+
+
+# --- Phase 3: embedding checkpoints and chunk reads --------------------------
+
+
+def filings_to_embed(session: Session) -> list[Filing]:
+    """Filings that are parsed but not yet embedded."""
+    return list(session.scalars(select(Filing).where(Filing.status == STATUS_PARSED)))
+
+
+def child_chunks_for_filing(session: Session, accession: str) -> list[Chunk]:
+    """The child (retrieval-unit) chunks of a filing, in order."""
+    return list(
+        session.scalars(
+            select(Chunk)
+            .where(Chunk.accession == accession, Chunk.kind == "child")
+            .order_by(Chunk.chunk_index)
+        )
+    )
+
+
+def mark_filing_embedded(session: Session, accession: str) -> None:
+    session.execute(
+        update(Filing)
+        .where(Filing.accession == accession)
+        .values(status=STATUS_EMBEDDED, updated_at=func.now())
+    )
+
+
+def mark_filing_embed_failed(session: Session, accession: str) -> None:
+    session.execute(
+        update(Filing)
+        .where(Filing.accession == accession)
+        .values(status=STATUS_EMBED_FAILED, updated_at=func.now())
+    )

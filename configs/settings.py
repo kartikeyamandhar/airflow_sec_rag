@@ -124,10 +124,36 @@ class Settings(BaseSettings):
         description="Sections shorter than this are dropped as likely table-of-contents.",
     )
 
+    # --- Embedding ------------------------------------------------------------
+    embedding_backend: Literal["fastembed", "runpod"] = Field(
+        default="fastembed",
+        description="'fastembed' (CPU, default) or 'runpod' (GPU serverless endpoint).",
+    )
+    embedding_model: str = Field(
+        default="BAAI/bge-small-en-v1.5",
+        description="Embedding model name (bge family).",
+    )
+    embedding_dimension: int = Field(
+        default=384,
+        gt=0,
+        description="Vector dimension; must match the model and the Qdrant collection.",
+    )
+    embedding_batch_size: int = Field(default=64, gt=0, description="Texts per embedding call.")
+    runpod_endpoint_id: str = Field(
+        default="",
+        description="RunPod serverless endpoint id (used when embedding_backend='runpod').",
+    )
+
     # --- Qdrant (vector store) ------------------------------------------------
     qdrant_url: str = Field(
         default="http://localhost:6333",
         description="Qdrant endpoint (local Docker in dev, Cloud for the demo).",
+    )
+    qdrant_api_key: SecretStr = Field(
+        default=SecretStr(""), description="Qdrant Cloud API key (empty for local)."
+    )
+    qdrant_collection: str = Field(
+        default="sec_filings", description="Qdrant collection holding chunk vectors."
     )
 
     # --- LLM (answer model + eval judge) --------------------------------------
