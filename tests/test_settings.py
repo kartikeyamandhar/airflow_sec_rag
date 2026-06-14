@@ -39,6 +39,11 @@ _DECLARED_ENV_KEYS = (
     "QDRANT_URL",
     "QDRANT_API_KEY",
     "QDRANT_COLLECTION",
+    "SPARSE_EMBEDDING_MODEL",
+    "RERANKER_BACKEND",
+    "RERANKER_MODEL",
+    "RETRIEVAL_TOP_K",
+    "RERANK_TOP_N",
     "LLM_API_KEY",
 )
 
@@ -119,3 +124,7 @@ def test_embedding_defaults(isolated_env: None) -> None:
     assert settings.embedding_dimension == 384
     assert settings.embedding_batch_size == 64
     assert settings.qdrant_collection == "sec_filings"
+    assert settings.sparse_embedding_model == "Qdrant/bm25"
+    assert settings.reranker_backend == "fastembed"
+    assert settings.retrieval_top_k == 20
+    assert settings.rerank_top_n == 5

@@ -19,7 +19,7 @@ from app.narrative.chunk import chunk_sections
 from app.narrative.extract import Section
 from app.vectorstore.qdrant_index import QdrantIndex
 from scripts.index_chunks import run_index
-from tests.fakes import FakeEmbedder
+from tests.fakes import FakeEmbedder, FakeSparseEmbedder
 
 _ACCESSION = "0000320193-23-000106"
 _CIK = 320193
@@ -65,9 +65,10 @@ def test_index_then_reindex_is_idempotent(
     assert child_count > 1
 
     embedder = FakeEmbedder(dimension=8)
+    sparse = FakeSparseEmbedder()
     index = QdrantIndex(QdrantClient(location=":memory:"), "sec_test", dimension=8)
 
-    summary = run_index(embedder, index, pg_session_factory, batch_size=4)
+    summary = run_index(embedder, sparse, index, pg_session_factory, batch_size=4)
     assert summary.filings_embedded == 1
     assert summary.points == child_count
     assert summary.failed == 0
@@ -79,7 +80,7 @@ def test_index_then_reindex_is_idempotent(
         assert filing.status == STATUS_EMBEDDED
 
     # Re-run: the embedded filing is no longer pending, and the index is unchanged.
-    rerun = run_index(embedder, index, pg_session_factory, batch_size=4)
+    rerun = run_index(embedder, sparse, index, pg_session_factory, batch_size=4)
     assert rerun.filings_embedded == 0
     assert rerun.points == 0
     assert index.count() == child_count

@@ -156,6 +156,24 @@ class Settings(BaseSettings):
         default="sec_filings", description="Qdrant collection holding chunk vectors."
     )
 
+    # --- Retrieval ------------------------------------------------------------
+    sparse_embedding_model: str = Field(
+        default="Qdrant/bm25",
+        description="Sparse (lexical) model for the BM25 half of hybrid search.",
+    )
+    reranker_backend: Literal["fastembed", "none"] = Field(
+        default="fastembed",
+        description="'fastembed' cross-encoder rerank, or 'none' to skip reranking.",
+    )
+    reranker_model: str = Field(
+        default="Xenova/ms-marco-MiniLM-L-6-v2",
+        description="Cross-encoder model used to rerank candidates.",
+    )
+    retrieval_top_k: int = Field(
+        default=20, gt=0, description="Candidates pulled from hybrid search per query."
+    )
+    rerank_top_n: int = Field(default=5, gt=0, description="Results kept after reranking.")
+
     # --- LLM (answer model + eval judge) --------------------------------------
     llm_api_key: SecretStr = Field(
         default=SecretStr(""),

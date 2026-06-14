@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from datetime import date
 
 from app.domain.models import Company, FilingRef
+from app.embedding.sparse import SparseVector
 
 
 class FakeEdgarClient:
@@ -61,3 +62,27 @@ class FakeEmbedder:
     def _vector(self, text: str) -> list[float]:
         digest = hashlib.sha256(text.encode("utf-8")).digest()
         return [digest[i % len(digest)] / 255.0 for i in range(self._dimension)]
+
+
+class FakeSparseEmbedder:
+    """A deterministic ``SparseEmbedder`` for tests (term ids from word hashes)."""
+
+    def embed_sparse(self, texts: list[str]) -> list[SparseVector]:
+        return [self._sparse(text) for text in texts]
+
+    def _sparse(self, text: str) -> SparseVector:
+        indices = sorted(
+            {
+                int(hashlib.sha256(word.encode("utf-8")).hexdigest(), 16) % 1000
+                for word in text.split()[:16]
+            }
+        )
+        return SparseVector(indices=indices, values=[1.0] * len(indices))
+
+
+class FakeReranker:
+    """A deterministic ``Reranker`` scoring by query/document word overlap."""
+
+    def rerank(self, query: str, documents: list[str]) -> list[float]:
+        query_words = set(query.lower().split())
+        return [float(len(query_words & set(doc.lower().split()))) for doc in documents]

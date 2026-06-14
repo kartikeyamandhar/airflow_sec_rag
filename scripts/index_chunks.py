@@ -1,9 +1,9 @@
-"""Embed parsed chunks and load them into the Qdrant vector index.
+"""Embed parsed chunks (dense + sparse) and load them into the Qdrant index.
 
-For each parsed filing, embed its child chunks and upsert them into Qdrant with
-their metadata payload, then advance status to ``embedded``. Idempotent: point ids
-are derived from (accession, chunk_index), so re-indexing overwrites rather than
-duplicates, and embedded filings drop out of the queue.
+For each parsed filing, embed its child chunks with both the dense (bge) and sparse
+(BM25) embedders and upsert them into Qdrant with their metadata payload, then
+advance status to ``embedded``. Idempotent: point ids are derived from (accession,
+chunk_index), so re-indexing overwrites rather than duplicates.
 
 Run: ``uv run python -m scripts.index_chunks``
 """
@@ -16,7 +16,8 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.embedding.base import Embedder
-from app.embedding.factory import build_embedder
+from app.embedding.factory import build_embedder, build_sparse_embedder
+from app.embedding.sparse import SparseEmbedder, SparseVector
 from app.index import repository as repo
 from app.index.db import create_all, make_engine, make_session_factory, session_scope
 from app.logging import configure_logging, get_logger
@@ -41,8 +42,18 @@ def _embed_in_batches(embedder: Embedder, texts: list[str], batch_size: int) -> 
     return vectors
 
 
+def _embed_sparse_in_batches(
+    embedder: SparseEmbedder, texts: list[str], batch_size: int
+) -> list[SparseVector]:
+    vectors: list[SparseVector] = []
+    for start in range(0, len(texts), batch_size):
+        vectors.extend(embedder.embed_sparse(texts[start : start + batch_size]))
+    return vectors
+
+
 def run_index(
     embedder: Embedder,
+    sparse_embedder: SparseEmbedder,
     index: QdrantIndex,
     session_factory: sessionmaker[Session],
     *,
@@ -67,6 +78,7 @@ def run_index(
                         "ticker": c.ticker,
                         "form": c.form,
                         "section": c.section,
+                        "chunk_index": c.chunk_index,
                         "parent_index": c.parent_index,
                         "char_start": c.char_start,
                         "char_end": c.char_end,
@@ -77,17 +89,20 @@ def run_index(
             ]
         try:
             if rows:
-                vectors = _embed_in_batches(
-                    embedder, [text for _index, text, _payload in rows], batch_size
-                )
+                texts = [text for _index, text, _payload in rows]
+                dense = _embed_in_batches(embedder, texts, batch_size)
+                sparse = _embed_sparse_in_batches(sparse_embedder, texts, batch_size)
                 points = [
                     ChunkPoint(
                         accession=accession,
                         chunk_index=chunk_index,
-                        vector=vector,
+                        dense=dense_vector,
+                        sparse=sparse_vector,
                         payload=payload,
                     )
-                    for (chunk_index, _text, payload), vector in zip(rows, vectors, strict=True)
+                    for (chunk_index, _text, payload), dense_vector, sparse_vector in zip(
+                        rows, dense, sparse, strict=True
+                    )
                 ]
                 index.upsert_chunks(points)
                 summary.points += len(points)
@@ -116,9 +131,16 @@ def main(argv: list[str] | None = None) -> int:
     create_all(engine)
     session_factory = make_session_factory(engine)
     embedder = build_embedder(settings)
+    sparse_embedder = build_sparse_embedder(settings)
     index = build_qdrant_index(settings)
 
-    summary = run_index(embedder, index, session_factory, batch_size=settings.embedding_batch_size)
+    summary = run_index(
+        embedder,
+        sparse_embedder,
+        index,
+        session_factory,
+        batch_size=settings.embedding_batch_size,
+    )
     logger.info(
         "index_complete",
         filings_embedded=summary.filings_embedded,

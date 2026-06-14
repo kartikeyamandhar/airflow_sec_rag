@@ -8,9 +8,10 @@ Every claim is cited to a source span. The system scores its own confidence,
 refuses when nothing supports an answer, and blocks its own deploys when answer
 accuracy regresses on a golden set.
 
-> Status: Phase 3 complete (embedding and vector index). The pipeline discovers,
-> stores, and parses filings, then embeds the text chunks into a Qdrant vector
-> index; retrieval and answering come in later phases.
+> Status: Phase 4 complete (retrieval). The pipeline discovers, stores, parses, and
+> embeds filings, then answers retrieval queries with hybrid (dense + BM25) search,
+> metadata filtering, reranking, and comparison-question decomposition; grounded
+> answer generation comes next.
 
 ## Two data planes
 
@@ -85,6 +86,10 @@ uv run python -m scripts.parse_filings
 #    Default backend is local CPU (fastembed); set EMBEDDING_BACKEND=runpod to use a
 #    deployed RunPod GPU endpoint (see infra/runpod/).
 uv run python -m scripts.index_chunks
+
+# 6. Query the index: hybrid (dense + BM25) search with metadata filtering and
+#    reranking. Returns cited chunks. (Grounded answer generation is a later phase.)
+uv run python -m scripts.search "what are Apple's supply chain risks?" --ticker AAPL
 ```
 
 All steps are safe to re-run: completed work is skipped via the index checkpoint.

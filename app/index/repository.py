@@ -117,6 +117,12 @@ def distinct_ciks(session: Session) -> list[int]:
     return list(session.scalars(select(Company.cik).order_by(Company.cik)))
 
 
+def all_companies(session: Session) -> list[tuple[str, str]]:
+    """Return (ticker, name) pairs for every known company (for query aliases)."""
+    rows = session.execute(select(Company.ticker, Company.name)).all()
+    return [(row[0], row[1]) for row in rows]
+
+
 def mark_filing_stored(session: Session, accession: str) -> None:
     session.execute(
         update(Filing)
