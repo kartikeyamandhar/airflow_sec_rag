@@ -31,6 +31,7 @@ from app.index.models import (
     Company,
     Filing,
     NumericFact,
+    QueryLog,
 )
 
 
@@ -133,6 +134,31 @@ def report_dates_for_accessions(session: Session, accessions: set[str]) -> dict[
         select(Filing.accession, Filing.report_date).where(Filing.accession.in_(accessions))
     ).all()
     return {row[0]: row[1] for row in rows if row[1] is not None}
+
+
+def log_query(
+    session: Session,
+    *,
+    question: str,
+    ticker: str | None,
+    num_context: int,
+    coverage: float,
+    faithfulness: float | None,
+    confidence: float,
+    refused: bool,
+) -> None:
+    """Append one online query-log row."""
+    session.add(
+        QueryLog(
+            question=question,
+            ticker=ticker,
+            num_context=num_context,
+            coverage=coverage,
+            faithfulness=faithfulness,
+            confidence=confidence,
+            refused=refused,
+        )
+    )
 
 
 def mark_filing_stored(session: Session, accession: str) -> None:

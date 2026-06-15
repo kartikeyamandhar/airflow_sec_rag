@@ -127,3 +127,21 @@ class Chunk(Base):
     char_start: Mapped[int] = mapped_column(Integer)
     char_end: Mapped[int] = mapped_column(Integer)
     token_estimate: Mapped[int] = mapped_column(Integer)
+
+
+class QueryLog(Base):
+    """One row per answered query (online logging)."""
+
+    __tablename__ = "query_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    question: Mapped[str] = mapped_column(Text)
+    ticker: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    num_context: Mapped[int] = mapped_column(Integer)
+    coverage: Mapped[float] = mapped_column(Float)
+    faithfulness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confidence: Mapped[float] = mapped_column(Float)
+    refused: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

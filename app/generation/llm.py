@@ -52,3 +52,10 @@ def build_llm_client(settings: Settings) -> LLMClient:
     return AnthropicClient(
         api_key=settings.llm_api_key.get_secret_value(), model=settings.llm_model
     )
+
+
+def build_judge_client(settings: Settings) -> LLMClient:
+    """Build the configured judge-model client (entailment verification)."""
+    return AnthropicClient(
+        api_key=settings.llm_api_key.get_secret_value(), model=settings.judge_model
+    )

@@ -1,0 +1,15 @@
+# Golden set for the deploy gate (illustrative; curate against your indexed corpus).
+# Each item: a question, optional ticker filter, whether it should refuse, and
+# optional expectations (filings a good answer cites, substrings it contains).
+- question: "What does Apple identify as supply chain or manufacturing risks?"
+  ticker: AAPL
+  should_refuse: false
+  expect_substrings: ["outsourcing"]
+
+- question: "How does Apple describe competition in its markets?"
+  ticker: AAPL
+  should_refuse: false
+
+- question: "What is the capital of France?"
+  ticker: AAPL
+  should_refuse: true

@@ -8,6 +8,7 @@ from datetime import date
 
 from app.domain.models import Company, FilingRef
 from app.embedding.sparse import SparseVector
+from app.generation.models import Answer
 from app.retrieval.retriever import RetrievedChunk
 
 
@@ -115,3 +116,20 @@ class FakeLLMClient:
 
     def complete(self, *, system: str, user: str, max_tokens: int) -> str:
         return self._response
+
+
+class FakeAnswerable:
+    """An ``Answerable`` returning a canned Answer per question (for golden tests)."""
+
+    def __init__(self, answers: dict[str, Answer]) -> None:
+        self._answers = answers
+
+    def answer(
+        self,
+        question: str,
+        *,
+        ticker: str | None = None,
+        form: str | None = None,
+        section: str | None = None,
+    ) -> Answer:
+        return self._answers[question]

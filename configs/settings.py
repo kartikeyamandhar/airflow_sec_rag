@@ -205,6 +205,33 @@ class Settings(BaseSettings):
         description="Refuse if fewer than this fraction of answer sentences are cited.",
     )
 
+    # --- Evaluation (judge + deploy gate) -------------------------------------
+    judge_model: str = Field(
+        default="claude-haiku-4-5",
+        description="Model that verifies entailment of each cited claim.",
+    )
+    judge_max_tokens: int = Field(
+        default=512, gt=0, description="Max output tokens for the judge call."
+    )
+    eval_min_refusal_accuracy: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Deploy gate: minimum fraction of items with correct refuse/answer.",
+    )
+    eval_min_citation_hit_rate: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Deploy gate: minimum fraction of answered items citing an expected filing.",
+    )
+    eval_min_faithfulness: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Deploy gate: minimum mean entailment faithfulness across answers.",
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

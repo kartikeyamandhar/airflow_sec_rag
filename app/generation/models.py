@@ -27,7 +27,11 @@ class Citation:
 
 @dataclass(frozen=True)
 class Answer:
-    """A grounded answer, or a refusal when ``refused`` is true."""
+    """A grounded answer, or a refusal when ``refused`` is true.
+
+    ``faithfulness``/``numeric_ok`` are populated only when verification ran
+    (Phase 6); they are ``None`` for the plain Phase 5 path.
+    """
 
     question: str
     text: str
@@ -35,3 +39,8 @@ class Answer:
     confidence: float = 0.0
     refused: bool = False
     reason: str | None = None
+    coverage: float = 0.0
+    num_context: int = 0
+    faithfulness: float | None = None
+    numeric_ok: bool | None = None
+    unverified_numbers: list[str] = field(default_factory=list)

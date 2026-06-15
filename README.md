@@ -8,9 +8,10 @@ Every claim is cited to a source span. The system scores its own confidence,
 refuses when nothing supports an answer, and blocks its own deploys when answer
 accuracy regresses on a golden set.
 
-> Status: Phase 5 complete (generation). The pipeline discovers, stores, parses,
-> embeds, and retrieves, then produces a grounded, span-cited answer with an "as of"
-> date and a confidence score, or an explicit "not supported by any filing."
+> Status: Phase 6 complete (evaluation). On top of grounded generation, answers can
+> be entailment-verified (the cited span must support the claim), numbers are checked
+> against the source, every query is logged, and a golden-set deploy gate blocks
+> regressions in faithfulness or accuracy.
 
 ## Two data planes
 
@@ -93,7 +94,13 @@ uv run python -m scripts.search "what are Apple's supply chain risks?" --ticker 
 # 7. Ask a question: retrieve, then generate a grounded, span-cited answer with an
 #    "as of" date and confidence, or refuse if unsupported. Needs LLM_API_KEY.
 #    Defaults to the cheapest model (Claude Haiku 4.5); set LLM_MODEL to change it.
+#    Add --verify to entailment-check each cited claim and numeric-check figures.
 uv run python -m scripts.answer "what are Apple's supply chain risks?" --ticker AAPL
+
+# 8. Evaluate against the golden set and apply the deploy gate (exits non-zero on
+#    regression). Calls the answer + judge models, so run it with a budget, not in
+#    the default PR CI. Curate configs/golden.yaml for your corpus.
+uv run python -m scripts.evaluate --golden configs/golden.yaml
 ```
 
 All steps are safe to re-run: completed work is skipped via the index checkpoint.

@@ -49,6 +49,11 @@ _DECLARED_ENV_KEYS = (
     "LLM_MAX_TOKENS",
     "ANSWER_CONTEXT_CHUNKS",
     "ANSWER_MIN_CITATION_COVERAGE",
+    "JUDGE_MODEL",
+    "JUDGE_MAX_TOKENS",
+    "EVAL_MIN_REFUSAL_ACCURACY",
+    "EVAL_MIN_CITATION_HIT_RATE",
+    "EVAL_MIN_FAITHFULNESS",
 )
 
 
@@ -136,3 +141,7 @@ def test_embedding_defaults(isolated_env: None) -> None:
     assert settings.llm_max_tokens == 1024
     assert settings.answer_context_chunks == 8
     assert settings.answer_min_citation_coverage == 0.5
+    assert settings.judge_model == "claude-haiku-4-5"
+    assert settings.eval_min_refusal_accuracy == 1.0
+    assert settings.eval_min_citation_hit_rate == 0.8
+    assert settings.eval_min_faithfulness == 0.8

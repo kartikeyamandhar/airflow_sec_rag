@@ -1,9 +1,10 @@
-"""Citation enforcement: keep only cited sentences; detect refusals.
+"""Citation parsing and enforcement.
 
-This is citation *presence* enforcement, not entailment. A sentence is kept only
-if it carries at least one in-range ``[n]`` marker. Coverage is the fraction of the
-model's sentences that survived. The entailment verifier (does the cited span
-actually support the sentence?) is Phase 6.
+`parse_answer` splits the model's output into sentences and keeps those that carry
+at least one in-range ``[n]`` citation, as `Claim`s (sentence + its markers).
+`enforce_citations` is the Phase 5 view (joined text, used markers, coverage),
+re-expressed on top of `parse_answer`. The Phase 6 verifier consumes `Claim`s to
+check entailment. This is citation *presence*; entailment is the verifier's job.
 """
 
 from __future__ import annotations
@@ -18,8 +19,24 @@ _CITATION = re.compile(r"\[(\d+)\]")
 
 
 @dataclass(frozen=True)
+class Claim:
+    """A single answer sentence and the in-range markers it cites."""
+
+    text: str
+    markers: list[int]
+
+
+@dataclass(frozen=True)
+class ParsedAnswer:
+    """Cited claims plus the total sentence count (for coverage)."""
+
+    claims: list[Claim]
+    total_sentences: int
+
+
+@dataclass(frozen=True)
 class CitationParse:
-    """The enforced answer text, the markers used, and citation coverage."""
+    """The Phase 5 view: joined cited text, used markers, and coverage."""
 
     text: str
     markers: list[int]
@@ -32,23 +49,29 @@ def is_refusal(raw: str) -> bool:
     return not stripped or stripped.upper().startswith(REFUSAL_SENTINEL)
 
 
-def enforce_citations(raw: str, num_chunks: int) -> CitationParse:
-    """Drop uncited sentences and report which markers were used and coverage."""
+def parse_answer(raw: str, num_chunks: int) -> ParsedAnswer:
+    """Split into sentences; keep those with an in-range citation as claims."""
     sentences = [s.strip() for s in _SENTENCE.split(raw.strip()) if s.strip()]
-    if not sentences:
-        return CitationParse(text="", markers=[], coverage=0.0)
-
-    kept: list[str] = []
-    used: set[int] = set()
+    claims: list[Claim] = []
     for sentence in sentences:
-        valid = [
-            marker
-            for marker in (int(m) for m in _CITATION.findall(sentence))
-            if 1 <= marker <= num_chunks
-        ]
-        if valid:
-            kept.append(sentence)
-            used.update(valid)
+        markers = sorted(
+            {
+                marker
+                for marker in (int(m) for m in _CITATION.findall(sentence))
+                if 1 <= marker <= num_chunks
+            }
+        )
+        if markers:
+            claims.append(Claim(text=sentence, markers=markers))
+    return ParsedAnswer(claims=claims, total_sentences=len(sentences))
 
-    coverage = len(kept) / len(sentences)
-    return CitationParse(text=" ".join(kept), markers=sorted(used), coverage=coverage)
+
+def enforce_citations(raw: str, num_chunks: int) -> CitationParse:
+    """Drop uncited sentences; report joined text, used markers, and coverage."""
+    parsed = parse_answer(raw, num_chunks)
+    if parsed.total_sentences == 0:
+        return CitationParse(text="", markers=[], coverage=0.0)
+    markers = sorted({m for claim in parsed.claims for m in claim.markers})
+    text = " ".join(claim.text for claim in parsed.claims)
+    coverage = len(parsed.claims) / parsed.total_sentences
+    return CitationParse(text=text, markers=markers, coverage=coverage)

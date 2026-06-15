@@ -17,6 +17,7 @@ from app.index.models import STATUS_DISCOVERED, STATUS_STORED
 from app.index.models import Artifact as ArtifactRow
 from app.index.models import Company as CompanyRow
 from app.index.models import Filing as FilingRow
+from app.index.models import QueryLog as QueryLogRow
 
 _ACCESSION = "0000320193-23-000106"
 
@@ -104,3 +105,17 @@ def test_upsert_artifact_is_idempotent(db_session: Session) -> None:
     assert _count(db_session, ArtifactRow) == 1
     assert repo.artifact_exists(db_session, "filing", _ACCESSION, "primary_document")
     assert not repo.artifact_exists(db_session, "company", "320193", "company_facts")
+
+
+def test_log_query_writes_a_row(db_session: Session) -> None:
+    repo.log_query(
+        db_session,
+        question="what are the risks?",
+        ticker="AAPL",
+        num_context=8,
+        coverage=0.9,
+        faithfulness=0.8,
+        confidence=0.7,
+        refused=False,
+    )
+    assert _count(db_session, QueryLogRow) == 1
