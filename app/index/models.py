@@ -93,8 +93,10 @@ class NumericFact(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     cik: Mapped[int] = mapped_column(BigInteger, index=True)
     taxonomy: Mapped[str] = mapped_column(String(32))
-    concept: Mapped[str] = mapped_column(String(128), index=True)
-    label: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # concept and label are externally-controlled XBRL strings of unbounded length
+    # (long us-gaap and company-extension names exceed any fixed width); use Text.
+    concept: Mapped[str] = mapped_column(Text, index=True)
+    label: Mapped[str | None] = mapped_column(Text, nullable=True)
     unit: Mapped[str] = mapped_column(String(32))
     # Double precision. Financial magnitudes fit; exactness for huge integers is a
     # known limitation (see PROGRESS debt), acceptable for the MVP numbers plane.

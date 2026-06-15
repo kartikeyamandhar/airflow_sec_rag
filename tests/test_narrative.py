@@ -37,6 +37,45 @@ def test_segment_sections_prefers_real_body_over_toc() -> None:
     assert "We make products." in by_name["Item 1"]
 
 
+def test_segment_sections_drops_toc_and_preamble() -> None:
+    # Reproduces the Alphabet bug: a TOC ("Item 6" / "Exhibits" / page number)
+    # precedes a forward-looking-statements preamble that name-drops the query topic,
+    # then the real risk factors follow. The preamble must not be labeled "Item 6",
+    # and the real Item 1A must be detected with its own content.
+    text = (
+        "Table of Contents\n"
+        "Item 1. Business 3\n"
+        "Item 1A. Risk Factors 7\n"
+        "Item 6\n"
+        "Exhibits\n"
+        "54\n"
+        "Note About Forward-Looking Statements\n"
+        + ("We mention artificial intelligence repeatedly here. " * 20)
+        + "\n"
+        "ITEM 1A.\n"
+        "RISK FACTORS\n" + ("Our AI products carry regulatory and reputational risk. " * 20) + "\n"
+        "ITEM 7.\n"
+        "MD&A\n" + ("Revenue grew this year. " * 20) + "\n"
+    )
+    sections = segment_sections(text, min_section_chars=100)
+    names = [s.name for s in sections]
+    assert "Item 6" not in names
+    assert "Item 1A" in names
+    by_name = {s.name: s.text for s in sections}
+    assert "regulatory and reputational risk" in by_name["Item 1A"]
+    # The preamble (with the query topic) did not leak into the real section.
+    assert "artificial intelligence" not in by_name["Item 1A"]
+
+
+def test_segment_sections_keeps_real_heading_with_year_nearby() -> None:
+    # A 4-digit year near a heading is not a page number, so the section is kept.
+    text = (
+        "ITEM 7.\nManagement Discussion\n2024\n" + ("Net sales rose during the year. " * 30) + "\n"
+    )
+    sections = segment_sections(text, min_section_chars=100)
+    assert [s.name for s in sections] == ["Item 7"]
+
+
 def test_segment_sections_fallback_when_no_headings() -> None:
     sections = segment_sections("Just prose with no item headings whatsoever.")
     assert len(sections) == 1

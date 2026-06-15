@@ -18,7 +18,9 @@ services:
       POSTGRES_PASSWORD: sec_rag
       POSTGRES_DB: sec_rag
     ports:
-      - "5432:5432"
+      # Host port is overridable so a local Postgres on 5432 does not collide.
+      # Default stays 5432; set SEC_RAG_PG_PORT (e.g. 5433) and DATABASE_URL to match.
+      - "${SEC_RAG_PG_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

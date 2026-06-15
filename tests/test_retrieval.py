@@ -28,12 +28,21 @@ def test_decompose_single_comparison_and_none() -> None:
     assert len(one) == 1
     assert one[0].ticker == "AAPL"
 
+    # The company name (and possessive) is stripped from the sub-query text, since
+    # the ticker filter already pins the company; the text keys on the topic.
+    assert "Apple" not in one[0].text
+
     two = decompose("Compare Apple and Microsoft revenue", aliases)
     assert {sub.ticker for sub in two} == {"AAPL", "MSFT"}
+    # Both names are stripped so each sub-query is a clean topical query.
+    for sub in two:
+        assert "Apple" not in sub.text and "Microsoft" not in sub.text
+        assert "revenue" in sub.text
 
     none = decompose("What is the outlook?", aliases)
     assert len(none) == 1
     assert none[0].ticker is None
+    assert none[0].text == "What is the outlook?"
 
 
 def test_passthrough_reranker_preserves_order() -> None:

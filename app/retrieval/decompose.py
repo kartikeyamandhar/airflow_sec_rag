@@ -11,6 +11,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+# Optional possessive: an apostrophe followed by "s" (e.g. Apple's). A curly
+# apostrophe is normalized to a straight one before matching.
+_POSSESSIVE = "(?:'s)?"
+
 
 @dataclass(frozen=True)
 class SubQuery:
@@ -35,8 +39,27 @@ def aliases_from_companies(companies: list[tuple[str, str]]) -> dict[str, str]:
     return aliases
 
 
+def _strip_aliases(text: str, aliases: dict[str, str]) -> str:
+    """Remove company names (and possessives) from a query, collapsing whitespace.
+
+    Once a sub-query is filtered to one company by ticker, the company names in the
+    text only dilute the embedding. A comparison phrased "How do Microsoft and
+    Alphabet describe AI risk?" retrieves Alphabet's risk factors far better as the
+    topical "How do describe AI risk?" with a GOOGL filter than with both names left
+    in, which pull in generic business-overview passages instead.
+    """
+    cleaned = text.replace(chr(0x2019), "'")
+    for alias in aliases:
+        cleaned = re.sub(rf"\b{re.escape(alias)}{_POSSESSIVE}\b", " ", cleaned, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 def decompose(question: str, aliases: dict[str, str]) -> list[SubQuery]:
-    """Split a question into sub-queries by the companies it names."""
+    """Split a question into sub-queries by the companies it names.
+
+    Each matched company yields a sub-query filtered to its ticker, with company
+    names stripped from the text so retrieval keys on the topic, not the names.
+    """
     upper = question.upper()
     matched: list[str] = []
     for alias, ticker in aliases.items():
@@ -44,6 +67,7 @@ def decompose(question: str, aliases: dict[str, str]) -> list[SubQuery]:
             continue
         if re.search(rf"\b{re.escape(alias)}\b", upper):
             matched.append(ticker)
-    if len(matched) >= 2:
-        return [SubQuery(text=question, ticker=ticker) for ticker in matched]
-    return [SubQuery(text=question, ticker=matched[0] if matched else None)]
+    if not matched:
+        return [SubQuery(text=question, ticker=None)]
+    topic = _strip_aliases(question, aliases) or question
+    return [SubQuery(text=topic, ticker=ticker) for ticker in matched]
