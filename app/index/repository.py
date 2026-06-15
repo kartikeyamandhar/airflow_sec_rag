@@ -8,6 +8,8 @@ discovery cannot undo acquisition progress.
 
 from __future__ import annotations
 
+import datetime
+
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
@@ -121,6 +123,16 @@ def all_companies(session: Session) -> list[tuple[str, str]]:
     """Return (ticker, name) pairs for every known company (for query aliases)."""
     rows = session.execute(select(Company.ticker, Company.name)).all()
     return [(row[0], row[1]) for row in rows]
+
+
+def report_dates_for_accessions(session: Session, accessions: set[str]) -> dict[str, datetime.date]:
+    """Return the period-of-report date for each accession that has one."""
+    if not accessions:
+        return {}
+    rows = session.execute(
+        select(Filing.accession, Filing.report_date).where(Filing.accession.in_(accessions))
+    ).all()
+    return {row[0]: row[1] for row in rows if row[1] is not None}
 
 
 def mark_filing_stored(session: Session, accession: str) -> None:

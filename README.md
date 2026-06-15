@@ -8,10 +8,9 @@ Every claim is cited to a source span. The system scores its own confidence,
 refuses when nothing supports an answer, and blocks its own deploys when answer
 accuracy regresses on a golden set.
 
-> Status: Phase 4 complete (retrieval). The pipeline discovers, stores, parses, and
-> embeds filings, then answers retrieval queries with hybrid (dense + BM25) search,
-> metadata filtering, reranking, and comparison-question decomposition; grounded
-> answer generation comes next.
+> Status: Phase 5 complete (generation). The pipeline discovers, stores, parses,
+> embeds, and retrieves, then produces a grounded, span-cited answer with an "as of"
+> date and a confidence score, or an explicit "not supported by any filing."
 
 ## Two data planes
 
@@ -88,8 +87,13 @@ uv run python -m scripts.parse_filings
 uv run python -m scripts.index_chunks
 
 # 6. Query the index: hybrid (dense + BM25) search with metadata filtering and
-#    reranking. Returns cited chunks. (Grounded answer generation is a later phase.)
+#    reranking. Returns cited chunks.
 uv run python -m scripts.search "what are Apple's supply chain risks?" --ticker AAPL
+
+# 7. Ask a question: retrieve, then generate a grounded, span-cited answer with an
+#    "as of" date and confidence, or refuse if unsupported. Needs LLM_API_KEY.
+#    Defaults to the cheapest model (Claude Haiku 4.5); set LLM_MODEL to change it.
+uv run python -m scripts.answer "what are Apple's supply chain risks?" --ticker AAPL
 ```
 
 All steps are safe to re-run: completed work is skipped via the index checkpoint.

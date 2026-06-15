@@ -8,6 +8,7 @@ from datetime import date
 
 from app.domain.models import Company, FilingRef
 from app.embedding.sparse import SparseVector
+from app.retrieval.retriever import RetrievedChunk
 
 
 class FakeEdgarClient:
@@ -86,3 +87,31 @@ class FakeReranker:
     def rerank(self, query: str, documents: list[str]) -> list[float]:
         query_words = set(query.lower().split())
         return [float(len(query_words & set(doc.lower().split()))) for doc in documents]
+
+
+class FakeRetriever:
+    """A ``ChunkRetriever`` returning a fixed list of chunks (no Qdrant)."""
+
+    def __init__(self, chunks: list[RetrievedChunk]) -> None:
+        self._chunks = chunks
+
+    def retrieve(
+        self,
+        question: str,
+        *,
+        ticker: str | None = None,
+        form: str | None = None,
+        section: str | None = None,
+        limit: int | None = None,
+    ) -> list[RetrievedChunk]:
+        return list(self._chunks)
+
+
+class FakeLLMClient:
+    """An ``LLMClient`` returning a canned response (no network)."""
+
+    def __init__(self, response: str) -> None:
+        self._response = response
+
+    def complete(self, *, system: str, user: str, max_tokens: int) -> str:
+        return self._response

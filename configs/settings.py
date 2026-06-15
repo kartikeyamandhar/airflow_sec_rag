@@ -179,6 +179,31 @@ class Settings(BaseSettings):
         default=SecretStr(""),
         description="API key for the answer model and the evaluation judge.",
     )
+    llm_model: str = Field(
+        default="claude-haiku-4-5",
+        description=(
+            "Answer model. Defaults to Haiku 4.5 (cheapest Claude); set LLM_MODEL "
+            "to claude-sonnet-4-6 or claude-opus-4-8 for higher quality at more cost."
+        ),
+    )
+    llm_max_tokens: int = Field(
+        default=1024,
+        gt=0,
+        description="Max output tokens per answer. Grounded answers are short.",
+    )
+
+    # --- Generation / grounding -----------------------------------------------
+    answer_context_chunks: int = Field(
+        default=8,
+        gt=0,
+        description="How many retrieved chunks to put in the grounding prompt.",
+    )
+    answer_min_citation_coverage: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Refuse if fewer than this fraction of answer sentences are cited.",
+    )
 
 
 @lru_cache(maxsize=1)

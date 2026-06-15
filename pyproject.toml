@@ -7,6 +7,7 @@ requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }
 authors = [{ name = "Kartikeya Mandhar", email = "kartikeya.mandhar511@gmail.com" }]
 dependencies = [
+    "anthropic>=0.109.1",
     "boto3>=1.43.29",
     "edgartools>=5.36.0",
     "fastembed>=0.8.0",

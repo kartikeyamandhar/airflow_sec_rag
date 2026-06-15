@@ -45,6 +45,10 @@ _DECLARED_ENV_KEYS = (
     "RETRIEVAL_TOP_K",
     "RERANK_TOP_N",
     "LLM_API_KEY",
+    "LLM_MODEL",
+    "LLM_MAX_TOKENS",
+    "ANSWER_CONTEXT_CHUNKS",
+    "ANSWER_MIN_CITATION_COVERAGE",
 )
 
 
@@ -128,3 +132,7 @@ def test_embedding_defaults(isolated_env: None) -> None:
     assert settings.reranker_backend == "fastembed"
     assert settings.retrieval_top_k == 20
     assert settings.rerank_top_n == 5
+    assert settings.llm_model == "claude-haiku-4-5"
+    assert settings.llm_max_tokens == 1024
+    assert settings.answer_context_chunks == 8
+    assert settings.answer_min_citation_coverage == 0.5
