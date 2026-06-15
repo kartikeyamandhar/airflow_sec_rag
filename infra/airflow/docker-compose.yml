@@ -1,0 +1,54 @@
+# Reference Airflow stack for the SEC RAG pipeline DAG (the orchestration deploy path).
+#
+# This is heavy and OPTIONAL. To just run the pipeline once, use `make pipeline`
+# (no Airflow). Use this to run it on a schedule with retries and a UI.
+#
+# Build + up:  docker compose -f infra/airflow/docker-compose.yml up --build
+# UI:          http://localhost:8080  (the admin password is printed by `standalone`)
+#
+# It talks to the Postgres + Qdrant from infra/docker-compose.yml via
+# host.docker.internal (add `extra_hosts: ["host.docker.internal:host-gateway"]`
+# on Linux). SEC RAG settings are read from the shell environment (your .env).
+# For production, use an Airflow secrets backend instead of plaintext env.
+
+services:
+  airflow-db:
+    image: postgres:16
+    container_name: sec_rag_airflow_db
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_db:/var/lib/postgresql/data
+
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sec_rag_airflow
+    depends_on:
+      - airflow-db
+    command: standalone
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      # SEC RAG settings (point at the host's Postgres + Qdrant from infra/docker-compose.yml).
+      DATABASE_URL: postgresql+psycopg://sec_rag:sec_rag@host.docker.internal:5432/sec_rag
+      QDRANT_URL: http://host.docker.internal:6333
+      EDGAR_IDENTITY: ${EDGAR_IDENTITY:-}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-sec-rag-raw}
+      R2_ENDPOINT_URL: ${R2_ENDPOINT_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+    volumes:
+      - ../../:/opt/sec_rag
+      - ./dags:/opt/airflow/dags
+
+volumes:
+  airflow_db:

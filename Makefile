@@ -5,9 +5,10 @@
 # cannot silently diverge. Everything runs through `uv` for a pinned, reproducible
 # toolchain; do not call bare python/ruff/mypy.
 
-.PHONY: help setup format lint type test check clean db-up db-down
+.PHONY: help setup format lint type test check clean db-up db-down pipeline airflow-up airflow-down
 
 COMPOSE := docker compose -f infra/docker-compose.yml
+AIRFLOW_COMPOSE := docker compose -f infra/airflow/docker-compose.yml
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -36,8 +37,20 @@ check: lint type test ## The full local gate: lint + type + test
 clean: ## Remove tool caches
 	rm -rf .mypy_cache .ruff_cache .pytest_cache .coverage htmlcov
 
-db-up: ## Start local Postgres (docker compose)
+db-up: ## Start local Postgres + Qdrant (docker compose)
 	$(COMPOSE) up -d
 
-db-down: ## Stop local Postgres (keeps the data volume)
+db-down: ## Stop local Postgres + Qdrant (keeps the data volumes)
 	$(COMPOSE) down
+
+pipeline: ## Run the full ingestion pipeline once (no Airflow)
+	uv run python -m scripts.discover_filings --config configs/universe.dev.yaml
+	uv run python -m scripts.acquire_filings
+	uv run python -m scripts.parse_filings
+	uv run python -m scripts.index_chunks
+
+airflow-up: ## Start the Airflow stack (orchestration deploy path; heavy)
+	$(AIRFLOW_COMPOSE) up --build -d
+
+airflow-down: ## Stop the Airflow stack
+	$(AIRFLOW_COMPOSE) down

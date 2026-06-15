@@ -8,10 +8,9 @@ Every claim is cited to a source span. The system scores its own confidence,
 refuses when nothing supports an answer, and blocks its own deploys when answer
 accuracy regresses on a golden set.
 
-> Status: Phase 6 complete (evaluation). On top of grounded generation, answers can
-> be entailment-verified (the cited span must support the claim), numbers are checked
-> against the source, every query is logged, and a golden-set deploy gate blocks
-> regressions in faithfulness or accuracy.
+> Status: Phase 7 complete (orchestration). The ingestion pipeline runs on a
+> schedule via an Airflow DAG (control plane only) and is incremental by design;
+> grounded generation and evaluation sit on top.
 
 ## Two data planes
 
@@ -107,6 +106,28 @@ All steps are safe to re-run: completed work is skipped via the index checkpoint
 Numbers come from the XBRL CompanyFacts API and narrative from the filing HTML.
 Parsing keeps the planes separate: numeric facts (attributed to their filing) and
 chunked text whose offsets map back to an exact, citable source span.
+
+Run the whole ingestion chain (steps 2-5) in one command, no Airflow:
+
+```bash
+make pipeline
+```
+
+## Orchestration (Phase 7)
+
+For scheduled, incremental ingestion, an Airflow DAG
+([infra/airflow/dags/sec_rag_pipeline.py](infra/airflow/dags/sec_rag_pipeline.py))
+shells out to the same CLIs as a control plane (it never parses or embeds in a
+worker). Because each step checkpoints by filing status, a scheduled run processes
+only new filings. The stack is heavy and optional:
+
+```bash
+make airflow-up    # build + start Airflow (UI on http://localhost:8080)
+make airflow-down
+```
+
+For production scale, set `EMBEDDING_BACKEND=runpod` so the index step embeds on a
+RunPod GPU rather than the Airflow worker.
 
 ## Commands
 
