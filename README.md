@@ -8,9 +8,9 @@ Every claim is cited to a source span. The system scores its own confidence,
 refuses when nothing supports an answer, and blocks its own deploys when answer
 accuracy regresses on a golden set.
 
-> Status: Phase 7 complete (orchestration). The ingestion pipeline runs on a
-> schedule via an Airflow DAG (control plane only) and is incremental by design;
-> grounded generation and evaluation sit on top.
+> Status: Phase 8 complete - the roadmap is finished. The full pipeline (acquire ->
+> parse -> embed -> retrieve -> generate -> evaluate) is orchestrated by Airflow and
+> served over HTTP (with a thin UI and metrics) and to agents via an MCP server.
 
 ## Two data planes
 
@@ -128,6 +128,25 @@ make airflow-down
 
 For production scale, set `EMBEDDING_BACKEND=runpod` so the index step embeds on a
 RunPod GPU rather than the Airflow worker.
+
+## Serving (Phase 8)
+
+Serve the engine over HTTP (with a thin browser UI and Prometheus metrics):
+
+```bash
+uv run uvicorn app.serving.api:app --reload   # UI at http://localhost:8000
+```
+
+Endpoints: `GET /` (UI), `POST /answer`, `POST /search`, `GET /health`, `GET /metrics`.
+The service is for local/dev use; it has no auth and the answer endpoint spends model
+credit, so add auth + rate limiting before any real exposure.
+
+Expose retrieval and answering to an agent (Claude) as MCP tools
+(`search_filings`, `answer_question`):
+
+```bash
+uv run python -m app.serving.mcp_server
+```
 
 ## Commands
 
